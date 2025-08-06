@@ -14,7 +14,7 @@ class Item extends Model
     protected $primaryKey = "id";
 
     protected $fillable = [
-    	'name',
+        'name',
         'jenis_barang',
         'foto',
         'kondisi',
@@ -24,74 +24,93 @@ class Item extends Model
 
     public $timestamps = false;
 
-    public function getCategory()
+    // Relasi ke kategori
+    public function category()
     {
         return $this->belongsTo(Category::class, 'jenis_barang', 'id');
     }
-    public function getAllData()
+
+    // Ambil semua data terbaru
+    public static function getAllData()
     {
-        return $this->latest()->get();
+        return self::latest()->get();
     }
 
-    public function create($data){
-        return $this->create($data);
-    }
-
-    public function findById($id)
+    // Buat data baru
+    public static function createItem($data)
     {
-        return $this->find($id);
+        return self::create($data);
     }
 
-    public function getDataByCode($code){
-        return $this->where('kode_barang', $code)->first();
-    }
-
-    public function updateData($id, $data)
+    // Cari berdasarkan ID
+    public static function findById($id)
     {
-        return $this->where('id', $id)->update($data);
+        return self::find($id);
     }
 
-    public function updateDataByCode($id, $data)
+    // Cari berdasarkan kode barang
+    public static function getDataByCode($code)
     {
-        return $this->where('kode_barang', $id)->update($data);
+        return self::where('kode_barang', $code)->first();
     }
 
-    public function deleteById($id)
+    // Update berdasarkan ID
+    public static function updateData($id, $data)
     {
-        return $this->where('id', $id)->delete();
+        return self::where('id', $id)->update($data);
     }
 
+    // Update berdasarkan kode barang
+    public static function updateDataByCode($code, $data)
+    {
+        return self::where('kode_barang', $code)->update($data);
+    }
+
+    // Hapus berdasarkan ID
+    public static function deleteById($id)
+    {
+        return self::where('id', $id)->delete();
+    }
+
+    // Ambil data dengan relasi kategori
     public static function getWithCategory()
     {
-        return self::with('getCategory')->get();
+        return self::with('category')->get();
     }
 
-    public function getGoodCondition(){
-        return $this->where('kondisi', 'baik')->get();
-    }
-
-    public function getBadCondition(){
-        return $this->where('kondisi', 'rusak')->get();
-    }
-
-    public function getDataReady(){
-        return $this->where('tersedia', 'ya')->get();
-    }
-
-    public function count()
+    // Barang kondisi baik
+    public static function getGoodCondition()
     {
-        return $this->count();
+        return self::where('kondisi', 'baik')->get();
     }
 
-    public function goodDataCount()
+    // Barang kondisi rusak
+    public static function getBadCondition()
     {
-        return $this->where('kondisi', 'baik')->count();
+        return self::where('kondisi', 'rusak')->get();
     }
 
-    public function badDataCount()
+    // Barang tersedia
+    public static function getDataReady()
     {
-        return $this->where('kondisi', 'rusak')->count();
+        return self::where('tersedia', 'ya')->get();
     }
 
+    // Hitung semua data
+    public static function totalCount()
+    {
+        return self::count();
+    }
 
+    // Hitung barang baik
+    public static function goodDataCount()
+    {
+        return self::where('kondisi', 'baik')->count();
+    }
+
+    // Hitung barang rusak
+    public static function badDataCount()
+    {
+        return self::where('kondisi', 'rusak')->count();
+    }
 }

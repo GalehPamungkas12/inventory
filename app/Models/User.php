@@ -7,28 +7,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Carbon\Carbon;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = "users";
+    protected $table = 'users';
 
-    protected $primaryKey = "id";
+    protected $primaryKey = 'id';
 
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'kelas',
         'google_id',
-        'facebook_id'
+        'facebook_id',
+        'remember_token',
+        'created_at',
+        'updated_at',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -37,40 +40,49 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * The attributes that should be cast.
-     *
-     * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
 
+    /**
+     * Ambil semua data user (ordered by latest)
+     */
     public function getAllData()
     {
-        return $this->latest()->get();
+        return self::latest()->get();
     }
 
-    public function create($data){
-        return $this->create($data);
-    }
-
+    /**
+     * Cari user berdasarkan ID
+     */
     public function findById($id)
     {
-        return $this->find($id);
+        return self::find($id);
     }
 
+    /**
+     * Update user berdasarkan ID
+     */
     public function updateData($id, $data)
     {
-        return $this->where('id', $id)->update($data);
+        return self::where('id', $id)->update($data);
     }
 
+    /**
+     * Hapus user berdasarkan ID
+     */
     public function deleteById($id)
     {
-        return $this->where('id', $id)->delete();
+        return self::where('id', $id)->delete();
     }
 
+    /**
+     * Ambil satu user berdasarkan ID
+     */
     public function getDataById($id)
     {
-        return $this->where('id', $id)->first();
+        return self::where('id', $id)->first();
     }
-    
 }
+    

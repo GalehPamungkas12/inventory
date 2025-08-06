@@ -10,7 +10,6 @@ class Loan extends Model
     use HasFactory;
 
     protected $table = "peminjaman_barang";
-
     protected $primaryKey = "id";
 
     protected $fillable = [
@@ -24,40 +23,67 @@ class Loan extends Model
         'foto'
     ];
 
-
-    public function getAllData()
+    /**
+     * Relasi ke model User (setiap peminjaman dimiliki oleh satu user)
+     */
+    public function user()
     {
-        return $this->latest()->get();
-    }
-
-    public function create($data){
-        return $this->create($data);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function findById($id)
+    /**
+     * Ambil semua data dan urutkan dari yang terbaru
+     */
+    public static function getAllData(): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->find($id);
+        return self::latest()->get();
     }
 
-    public function getDataByUserId($id)
+    /**
+     * Simpan data baru
+     */
+    public static function storeData(array $data): self
     {
-        return $this->where('User_id', $id)->get();
+        return self::create($data);
     }
 
-    public function updateData($id, $data)
+    /**
+     * Cari data berdasarkan ID
+     */
+    public static function findById(int $id): ?self
     {
-        return $this->where('id', $id)->update($data);
+        return self::find($id);
     }
 
-    public function deleteById($id)
+    /**
+     * Ambil semua data berdasarkan user_id tertentu
+     */
+    public static function getDataByUserId(int $id): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->where('id', $id)->delete();
+        return self::where('user_id', $id)->get();
     }
-    
-    public function count()
+
+    /**
+     * Update data berdasarkan ID
+     */
+    public static function updateData(int $id, array $data): bool
     {
-        return $this->count();
+        return self::where('id', $id)->update($data);
     }
- 
-    
+
+    /**
+     * Hapus data berdasarkan ID
+     */
+    public static function deleteById(int $id): bool
+    {
+        return self::where('id', $id)->delete();
+    }
+
+    /**
+     * Hitung total jumlah data peminjaman
+     */
+    public static function totalCount(): int
+    {
+        return self::count();
+    }
 }

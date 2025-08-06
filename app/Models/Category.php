@@ -10,43 +10,46 @@ class Category extends Model
     use HasFactory;
 
     protected $table = "jenis_barang";
-
     protected $primaryKey = "id";
-
-    protected $fillable = [
-    	'name'
-    ];
-
     public $timestamps = false;
 
+    protected $fillable = [
+        'name',
+    ];
 
+    // Ambil semua data dengan urutan terbaru
     public function getAllData()
     {
-        return $this->latest()->get();
+        return self::latest()->get();
     }
 
-    public function create($data){
-        return $this->create($data);
-    }
-
-    public function findById($id)
+    // Simpan data baru
+    public static function store(array $data)
     {
-        return $this->find($id);
+        return self::create($data);
     }
 
-    public function updateData($id, $data)
+    // Cari data berdasarkan ID
+    public static function findById($id)
     {
-        return $this->where('id', $id)->update($data);
+        return self::find($id);
     }
 
-    public function deleteById($id)
+    // Perbarui data berdasarkan ID
+    public static function updateData($id, array $data)
     {
-        return $this->where('id', $id)->delete();
+        return self::where('id', $id)->update($data);
     }
 
-    public function count()
+    // Hapus data berdasarkan ID
+    public static function deleteById($id)
     {
-        return $this->count();
+        return self::where('id', $id)->delete();
     }
 
+    // Hitung jumlah data
+    public static function totalCount()
+    {
+        return self::count();
+    }
 }

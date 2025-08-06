@@ -2,136 +2,147 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Loan;
-use App\Http\Requests\peminjamanbarang;
-use App\Models\Databarang;
 use App\Models\Item;
-use App\Models\Jenisbarang;
 use App\Models\Loan as ModelsLoan;
-use App\Models\Peminjaman;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class LoanController extends Controller
 {
     private $item;
     private $loan;
+
     public function __construct(Item $item, ModelsLoan $loan)
     {
         $this->item = $item;
         $this->loan = $loan;
-        $this->middleware(['auth','verified', 'checkRole:admin,user']);
+        $this->middleware(['auth', 'verified', 'checkRole:admin,user']);
     }
+
+    /**
+     * Tampilkan form peminjaman
+     */
     public function create()
     {
-
-      return view('dashboard.loan.add', [
-        'datas' => $this->item->getDataReady(),
-       ]);
+        return view('dashboard.loan.add', [
+            'datas' => $this->item->getDataReady(),
+        ]);
     }
-    public function store(Loan $request)
-    {     
 
-        if ($request->hasfile('surat')) {            
-            $filename = round(microtime(true) * 1000).'-'.str_replace(' ','-',$request->file('surat')->getClientOriginalName());
+    /**
+     * Simpan data peminjaman
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'kode_barang' => 'required',
+            'surat' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
+        ]);
+
+        if ($request->hasFile('surat')) {
+            $filename = round(microtime(true) * 1000) . '-' . str_replace(' ', '-', $request->file('surat')->getClientOriginalName());
             $request->file('surat')->move(public_path('surat-peminjaman'), $filename);
 
-           $databarang = $this->item->getDataByCode($request->kode_barang);
-           $peminjam = Auth::user()->name;
-           $id = Auth::user()->id;
-           $name = $databarang->name;
-           $kondisi = $databarang->kondisi;
-           $tersedia = $databarang->tersedia;
+            $databarang = $this->item->getDataByCode($request->kode_barang);
 
-           $data = [              
-            'peminjam' => $peminjam,
-            'name' => $name,  
-            'user_id' => Auth::user()->id,  
-            'kode_barang' => $request->kode_barang,
-            'surat' => $filename,
-            'kondisi' => $kondisi,
-            'tersedia' => $tersedia
-           ];
-           
-           $this->loan->create($data);
+            if (!$databarang) {
+                return redirect()->back()->with('error', 'Barang tidak ditemukan.');
+            }
 
-        
-        return redirect('/loan')->with('Pesan', 'Data Sukses Dikirim');
-                
+            $data = [
+                'peminjam' => Auth::user()->name,
+                'name' => $databarang->name,
+                'user_id' => Auth::user()->id,
+                'kode_barang' => $request->kode_barang,
+                'surat' => $filename,
+                'kondisi' => $databarang->kondisi,
+                'tersedia' => $databarang->tersedia,
+            ];
+
+            $this->loan->storeData($data);
+
+            return redirect('/loan')->with('Pesan', 'Data Sukses Dikirim');
         }
-       
+
+        return redirect()->back()->with('error', 'Surat tidak ditemukan.');
     }
+
+    /**
+     * Tampilkan daftar peminjaman
+     */
     public function index()
     {
-        if(Auth::user()->kelas === 'admin'){
+        $user = Auth::user();
 
-      return view('dashboard.loan.index', [
-        'datas' => $this->loan->getAllData(),
-       ]);
+        if ($user->kelas === 'admin') {
+            $datas = $this->loan->getAllData();
+        } else {
+            $datas = $this->loan->getDataByUserId($user->id);
+        }
 
-    }elseif(Auth::user()->kelas === 'user'){
-
-        return view('dashboard.loan.index', [
-            'datas' => $this->loan->getDataByUserId(Auth::user()->id)
-           ]);
-    
-
+        return view('dashboard.loan.index', ['datas' => $datas]);
     }
 
+    /**
+     * Verifikasi peminjaman oleh admin
+     */
+    public function loan($id)
+    {
+        $loan = $this->loan->findById($id);
+
+        if (!$loan) {
+            return redirect('/loan')->with('error', 'Data tidak ditemukan.');
+        }
+
+        $this->item->updateDataByCode($loan->kode_barang, ['tersedia' => 'tidak']);
+        $this->loan->updateData($id, ['tersedia' => 'tidak']);
+
+        return redirect('/loan')->with('Pesan', 'Data Sukses Diverifikasi');
     }
-    public function loan($id){
 
-        $x = $this->loan->getDataByUserId($id);
-        $data = ['tersedia' => 'tidak'];
+    /**
+     * Upload bukti pengembalian
+     */
+    public function return(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer|exists:peminjaman_barang,id',
+            'foto' => 'required|file|image|max:2048',
+        ]);
 
-        $this->item->updateDataByCode($x->kode_barang, $data);
+        $loan = $this->loan->findById($request->id);
 
-        $this->loan->update($id, $data);
-
-       return redirect('/loan')->with('Pesan', 'Data Sukses Diverifikasi');   
-
-
-    }
-    // public function kembali()
-    // {
-
-    //    return view('dashboard.peminjaman.kembali', [
-    //     'data' => Peminjaman::where(['user_id' => Auth::user()->id, 'peminjam' => Auth::user()->name, 'tersedia' => 'tidak'])->get(),
-    //    ]);
-
-    // }
-    public function return(Loan $request){
-           
-        $x =  $this->loan->findById($request->id); 
-
-        if ($request->hasfile('foto') && $x->foto == null) {  
-            $filename = round(microtime(true) * 1000).'-'.str_replace(' ','-',$request->file('foto')->getClientOriginalName());
+        if ($request->hasFile('foto') && $loan && $loan->foto === null) {
+            $filename = round(microtime(true) * 1000) . '-' . str_replace(' ', '-', $request->file('foto')->getClientOriginalName());
             $request->file('foto')->move(public_path('foto-kembali'), $filename);
 
-             $data = [
+            $data = [
                 'tersedia' => 'kembali',
-                'foto' => $filename
-             ];
+                'foto' => $filename,
+            ];
 
-             $this->loan->update($x->id, $data);
+            $this->loan->updateData($loan->id, $data);
 
-         return redirect('/loan')->with('Pesan', 'Data Sukses Dikirim');
-
+            return redirect('/loan')->with('Pesan', 'Data Sukses Dikirim');
         }
-        
+
+        return redirect('/loan')->with('error', 'Upload gagal atau data sudah memiliki foto.');
     }
 
-    public function returnbyid($id){
+    /**
+     * Konfirmasi bahwa pengembalian selesai
+     */
+    public function returnbyid($id)
+    {
+        $loan = $this->loan->findById($id);
 
-        $x = $this->loan->findById($id); 
-        $data = ['tersedia' => 'selesai'];
+        if (!$loan) {
+            return redirect('/loan')->with('error', 'Data tidak ditemukan.');
+        }
 
-        $this->item->updateDataByCode($x->kode_barang, $data);
+        $this->item->updateDataByCode($loan->kode_barang, ['tersedia' => 'ya']);
+        $this->loan->updateData($id, ['tersedia' => 'selesai']);
 
-        $this->loan->update($id, $data);
-
-      return redirect('/loan')->with('Pesan', 'Data Sukses Diselesaikan');
-
+        return redirect('/loan')->with('Pesan', 'Data Sukses Diselesaikan');
     }
 }
